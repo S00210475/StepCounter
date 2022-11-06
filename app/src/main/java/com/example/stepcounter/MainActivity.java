@@ -32,7 +32,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final DecimalFormat df = new DecimalFormat("0.00");
     Run currentRun = new Run();
     List<Run> savedRuns = new ArrayList<>();
-    int runCounter = 1;// Creates a new Handler
+    int runCounter = 1;
+    double stepsMin = 0;
     final Handler handler = new Handler();
 
     TextView timeView, stepsView, stepsMinView, countdownView;
@@ -171,14 +172,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             @Override
             public void run()
             {
-                currentRun.StepsMin = (Double.valueOf(currentRun.Steps)/ currentRun.Seconds)*60;
+                stepsMin = (Double.valueOf(currentRun.Steps)/ currentRun.Seconds)*60;
                 String time = String.valueOf(currentRun.Seconds);
                 timeView.setText(time);
                 if (stopwatchBool) {
                     currentRun.Seconds++;
                 }
-                String stepsMinTxt = df.format(currentRun.StepsMin);
-                if(Double.isNaN(currentRun.StepsMin))
+                String stepsMinTxt = df.format(stepsMin);
+                if(Double.isNaN(stepsMin))
                 {
                     stepsMinTxt = "0";
                 }
@@ -208,5 +209,36 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void StartSensor()
     {
         mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
+    }
+    @Override
+    protected void onSaveInstanceState(final Bundle outState) {
+        super.onSaveInstanceState(outState);
+        //A lot of problems arise from saving objects so I'm saving individual properties
+        // Save the state of steps
+        outState.putInt("currentRun.Steps", currentRun.Steps);
+        outState.putInt("currentRun.Seconds", currentRun.Seconds);
+        outState.putDouble("stepsMin", stepsMin);
+        for (int i = 0; i < savedRuns.size(); i++){
+            outState.putInt("savedRun.Steps", savedRuns.get(i).Steps);
+            outState.putInt("savedRun.Seconds", savedRuns.get(i).Seconds);
+        }
+    }
+    @Override
+    protected void onRestoreInstanceState(final Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+
+        // Read the state of item position
+        currentRun.Steps = savedInstanceState.getInt("currentRun.Steps");
+        currentRun.Seconds = savedInstanceState.getInt("currentRun.Seconds");
+        stepsMin = savedInstanceState.getDouble("stepsMin");
+        for (Run run: savedRuns) {
+            run.Steps = savedInstanceState.getInt("savedRun.Steps");
+            run.Seconds = savedInstanceState.getInt("savedRun.Seconds");
+        }
+        for (int i = 0; i < savedRuns.size(); i++){
+            savedRuns.get(i).Steps = savedInstanceState.getInt("savedRun.Steps");
+            savedRuns.get(i).Seconds = savedInstanceState.getInt("savedRun.Seconds");
+        }
+        //Log.i("1stTest", "Saved Runs restored " + savedRuns.get(0).Steps);
     }
 }

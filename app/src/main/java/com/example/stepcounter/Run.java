@@ -16,6 +16,4 @@ public class Run implements Serializable {
     int ID;
     int Steps;
     int Seconds;
-    double StepsMin;
-    private int mData;
 }
