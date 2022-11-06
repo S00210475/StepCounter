@@ -8,8 +8,11 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.os.CountDownTimer;
+import android.os.Parcelable;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.os.Handler;
@@ -18,19 +21,22 @@ import java.io.Serializable;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     // experimental values for hi and lo magnitude limits
     private final double HI_STEP = 11.0;     // upper mag limit
     private final double LO_STEP = 8.0;      // lower mag limit
     boolean highLimit = false;      // detect high limit
-    boolean stopwatchBool, startClick = false;
+    boolean stopwatchBool = false, startClick = false;
     private static final DecimalFormat df = new DecimalFormat("0.00");
     Run currentRun = new Run();
     List<Run> savedRuns = new ArrayList<>();
-    int runCounter = 1;
+    int runCounter = 1;// Creates a new Handler
+    final Handler handler = new Handler();
 
-    TextView timeView, stepsView, stepsMin;
+    TextView timeView, stepsView, stepsMinView, countdownView;
+    Button resetBtn;
     private SensorManager mSensorManager;
     private Sensor mSensor;
 
@@ -41,26 +47,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         timeView = findViewById(R.id.timeResult);
         stepsView = findViewById(R.id.stepResult);
-        stepsMin = findViewById(R.id.stepsMin);
+        stepsMinView = findViewById(R.id.stepsMin);
+        countdownView = findViewById(R.id.countdownView);
+        resetBtn = findViewById(R.id.resetBtn);
         // we are going to use the sensor service
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        stepsMin.setText("0");
         currentRun.ID = runCounter;
-        stopwatchBool = false;
+        resetBtn.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                ResetRun(v);
+                return false;
+            }
+        });
         RunTimer();
     }
     protected void onResume() {
-            stopwatchBool = true;
             super.onResume();
             // turn on the sensor
-            mSensorManager.registerListener(this, mSensor,
-                    SensorManager.SENSOR_DELAY_NORMAL);
     }
-
-    /*
-     * App running but not on screen - in the background
-     */
     protected void onPause() {
         stopwatchBool = false;
         super.onPause();
@@ -107,9 +113,32 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         onPause();
     }
 
-    public void StartRun(View view) {
-        Toast.makeText(this, "Run Resumed", Toast.LENGTH_SHORT).show();
-        onResume();
+    public void StartRun(View view) throws InterruptedException {
+        int countdown = 4000;
+        countdownView.bringToFront();
+        new CountDownTimer(countdown, 1000) {
+
+            public void onTick(long millisUntilFinished) {
+                countdownView.setText(String.valueOf(millisUntilFinished / 1000));
+            }
+
+            public void onFinish() {
+                stopwatchBool = true;
+                countdownView.setText("Run!!!");
+                StartSensor();
+                    new CountDownTimer(2000, 1000) {
+                        @Override
+                        public void onTick(long l) {
+
+                        }
+
+                        @Override
+                        public void onFinish() {
+                            countdownView.setText(" ");
+                        }
+                }.start();
+            }
+        }.start();
     }
 
     public void ResetRun(View view) {
@@ -126,14 +155,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         currentRun.ID = runCounter;
         stepsView.setText("0");
         timeView.setText("0");
+        stepsMinView.setText("0");
         onPause();
     }
     //Timer Logic
     private void RunTimer()
     {
-        // Creates a new Handler
-        final Handler handler = new Handler();
-
         // Call the post() method,
         // passing in a new Runnable.
         // The post() method processes
@@ -150,7 +177,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 if (stopwatchBool) {
                     currentRun.Seconds++;
                 }
-                stepsMin.setText(df.format(currentRun.StepsMin));
+                String stepsMinTxt = df.format(currentRun.StepsMin);
+                if(Double.isNaN(currentRun.StepsMin))
+                {
+                    stepsMinTxt = "0";
+                }
+                stepsMinView.setText(stepsMinTxt);
                 handler.postDelayed(this, 1000);
             }
         });
@@ -158,7 +190,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     public void ShowRun(View view) {
         Intent statsPage = new Intent(view.getContext(), StatsPage.class);
-
         for (Run run:savedRuns) {
             Log.i("1stTest", String.valueOf(run.ID + " & " + currentRun.ID));
             if (run.ID == currentRun.ID) {
@@ -167,7 +198,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         }
         savedRuns.add(currentRun);
-        statsPage.putExtra("currentRun", (Serializable) savedRuns);
+        statsPage.putExtra("runs", (Serializable) savedRuns);
         startActivity(statsPage);     // start the new page
+    }
+
+    public void ResetOneClick(View view) {
+        Toast.makeText(this, "Long Press to Reset!", Toast.LENGTH_SHORT).show();
+    }
+    public void StartSensor()
+    {
+        mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
     }
 }

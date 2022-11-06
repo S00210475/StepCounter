@@ -36,8 +36,9 @@ public class StatsPage extends AppCompatActivity implements AdapterView.OnItemSe
         time = findViewById(R.id.timeView);
         dropbox = findViewById(R.id.runSpinner);
 
-        Log.i("1stTest", "Initialization");
-        savedRuns = (List<Run>) getIntent().getSerializableExtra("currentRun");
+        Log.i("1stTest", "Retrieving runs");
+        savedRuns = (List<Run>) getIntent().getSerializableExtra("runs");
+        Log.i("1stTest", "saved runs retrieved");
         for (Run run: savedRuns) {
             runTitles.add( "Run " + String.valueOf(run.ID));
         }
