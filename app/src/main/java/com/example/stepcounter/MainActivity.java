@@ -3,13 +3,13 @@ package com.example.stepcounter;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.CountDownTimer;
-import android.os.Parcelable;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -21,7 +21,6 @@ import java.io.Serializable;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     // experimental values for hi and lo magnitude limits
@@ -45,6 +44,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
         timeView = findViewById(R.id.timeResult);
         stepsView = findViewById(R.id.stepResult);
@@ -172,7 +172,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             @Override
             public void run()
             {
-                stepsMin = (Double.valueOf(currentRun.Steps)/ currentRun.Seconds)*60;
+                stepsMin = (Double.valueOf(currentRun.Steps) / currentRun.Seconds) * 60;
                 String time = String.valueOf(currentRun.Seconds);
                 timeView.setText(time);
                 if (stopwatchBool) {
@@ -210,7 +210,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     {
         mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
     }
-    @Override
+    //Saves data when turned landscape
+    /*@Override
     protected void onSaveInstanceState(final Bundle outState) {
         super.onSaveInstanceState(outState);
         //A lot of problems arise from saving objects so I'm saving individual properties
@@ -240,5 +241,5 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             savedRuns.get(i).Seconds = savedInstanceState.getInt("savedRun.Seconds");
         }
         //Log.i("1stTest", "Saved Runs restored " + savedRuns.get(0).Steps);
-    }
+    }*/
 }
