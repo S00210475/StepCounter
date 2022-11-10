@@ -18,10 +18,10 @@
         app:layout_constraintBottom_toBottomOf="@+id/showrunBtn"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView" />
+        app:layout_constraintTop_toBottomOf="@+id/stepsTitle" />
 
     <TextView
-        android:id="@+id/textView"
+        android:id="@+id/stepsTitle"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:background="#000000"

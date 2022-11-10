@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -11,8 +12,19 @@ import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.view.animation.LinearInterpolator;
+import android.view.animation.RotateAnimation;
+import android.view.animation.TranslateAnimation;
 import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.os.Handler;
@@ -27,7 +39,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private final double HI_STEP = 11.0;     // upper mag limit
     private final double LO_STEP = 8.0;      // lower mag limit
     boolean highLimit = false;      // detect high limit
-    boolean stopwatchBool = false, startClick = false;
+    boolean stopwatchBool = false, animationStart = false;
+    //Formatting
     private static final DecimalFormat df = new DecimalFormat("0.00");
     Run currentRun = new Run();
     List<Run> savedRuns = new ArrayList<>();
@@ -35,8 +48,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     double stepsMin = 0;
     final Handler handler = new Handler();
 
-    TextView timeView, stepsView, stepsMinView, countdownView;
-    Button resetBtn;
+    TextView timeView, stepsView, stepsMinView, countdownView, thisIsShoe, thisIsStop;
+    ImageButton startBtn, stopBtn;
+    //Time variables
+    CountDownTimer countDownTimer;
+    int minutes = 0;
+    int seconds = 0;
+    String time = String.format("%d:%02d", minutes, seconds);
+
+    Animation runAnimationStart, runAnimationEnd;
+
     private SensorManager mSensorManager;
     private Sensor mSensor;
 
@@ -45,23 +66,62 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        //Starts pop up window
+        startActivity(new Intent(MainActivity.this,Poppin_Window.class));
 
         timeView = findViewById(R.id.timeResult);
         stepsView = findViewById(R.id.stepResult);
         stepsMinView = findViewById(R.id.stepsMin);
         countdownView = findViewById(R.id.countdownView);
-        resetBtn = findViewById(R.id.resetBtn);
+        startBtn = findViewById(R.id.startBtn);
+        stopBtn = findViewById(R.id.stopBtn);
         // we are going to use the sensor service
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         currentRun.ID = runCounter;
-        resetBtn.setOnLongClickListener(new View.OnLongClickListener() {
+        stopBtn.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
                 ResetRun(v);
                 return false;
             }
         });
+        //Animation Handling
+        runAnimationStart = (RotateAnimation) AnimationUtils.loadAnimation(this, R.anim.rotate);
+        runAnimationEnd = (RotateAnimation) AnimationUtils.loadAnimation(this, R.anim.rotate_back);
+
+        runAnimationStart.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+                Log.i("AnimationTest", "Animation started");
+            }
+            @Override
+            public void onAnimationEnd(Animation animation) {
+            }
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+                Log.i("AnimationTest", "Animation repeated");
+                startBtn.startAnimation(runAnimationEnd);
+            }
+        });
+
+        runAnimationEnd.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+                Log.i("AnimationTest", "Animation 2 started");
+            }
+            @Override
+            public void onAnimationEnd(Animation animation) {
+            }
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+                Log.i("AnimationTest", "Animation 2 repeated");
+                startBtn.startAnimation(runAnimationStart);
+            }
+        });
+        //Pop-up window logic
+
+
         RunTimer();
     }
     protected void onResume() {
@@ -111,23 +171,30 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     public void StopRun(View view) {
         Toast.makeText(this, "Run Stopped", Toast.LENGTH_SHORT).show();
+        if(currentRun.Seconds > 0) {
+            countDownTimer.cancel();
+            countdownView.setText("");
+        }
         onPause();
+        StopAnimation();
     }
 
     public void StartRun(View view) throws InterruptedException {
-        int countdown = 4000;
+        StopAnimation();
+        stopwatchBool = false;
+        int countdown = 3000;
         countdownView.bringToFront();
-        new CountDownTimer(countdown, 1000) {
-
+        countDownTimer = new CountDownTimer(countdown, 1000) {
             public void onTick(long millisUntilFinished) {
-                countdownView.setText(String.valueOf(millisUntilFinished / 1000));
+                countdownView.setText(String.valueOf(millisUntilFinished / 1000 + 1));
             }
-
             public void onFinish() {
                 stopwatchBool = true;
                 countdownView.setText("Run!!!");
                 StartSensor();
-                    new CountDownTimer(2000, 1000) {
+                startBtn.startAnimation(runAnimationStart);
+                //Holds the run!!! word for 2 seconds
+                new CountDownTimer(2000, 1000) {
                         @Override
                         public void onTick(long l) {
 
@@ -140,6 +207,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }.start();
             }
         }.start();
+        Log.i("AnimationTest", "Animation started");
     }
 
     public void ResetRun(View view) {
@@ -157,13 +225,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         stepsView.setText("0");
         timeView.setText("0");
         stepsMinView.setText("0");
+        StopAnimation();
         onPause();
     }
     //Timer Logic
     private void RunTimer()
     {
-        // Call the post() method,
-        // passing in a new Runnable.
         // The post() method processes
         // code without a delay,
         // so the code in the Runnable
@@ -172,8 +239,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             @Override
             public void run()
             {
+                minutes = currentRun.Seconds / 60;
+                seconds = currentRun.Seconds % 60;
                 stepsMin = (Double.valueOf(currentRun.Steps) / currentRun.Seconds) * 60;
-                String time = String.valueOf(currentRun.Seconds);
+                time = String.format("%d:%02d", minutes, seconds);
+                Log.i("TimeTest", String.valueOf(seconds));
                 timeView.setText(time);
                 if (stopwatchBool) {
                     currentRun.Seconds++;
@@ -209,6 +279,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void StartSensor()
     {
         mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
+    }
+    public void StopAnimation()
+    {
+        runAnimationStart.cancel();
+        runAnimationEnd.cancel();
     }
     //Saves data when turned landscape
     /*@Override
